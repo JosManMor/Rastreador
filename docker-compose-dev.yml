@@ -1,0 +1,61 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: rastreador_db_dev
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - "${DB_EXTERNAL_PORT}:3306"
+    volumes:
+      - mysql_data_dev:/var/lib/mysql
+      - ./rastreadorApp/database/data/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./rastreadorApp
+      dockerfile: Dockerfile.dev
+    container_name: rastreador_backend_dev
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - "${PORT}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./rastreadorApp:/app
+      - /app/node_modules
+    command: npm run dev -- -L
+
+  frontend:
+    build:
+      context: ./rastreadorFrontend
+      dockerfile: Dockerfile.dev
+    container_name: rastreador_frontend_dev
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - "19006:19006"
+      - "8081:8081"
+    depends_on:
+      - backend
+    volumes:
+      - ./rastreadorFrontend:/app
+      - /app/node_modules
+    command: npm run web -- --host 0.0.0.0 --port 19006
+
+volumes:
+  mysql_data_dev:
