@@ -55,7 +55,7 @@ services:
     volumes:
       - ./rastreadorFrontend:/app
       - /app/node_modules
-    command: npm run web -- --host 0.0.0.0 --port 19006
+    command: npm run web -- --host lan --port 19006
 
 volumes:
   mysql_data_dev:
