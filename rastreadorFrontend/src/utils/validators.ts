@@ -49,17 +49,26 @@ const passwordSchema = z
 
 const telefonoSchema = z
   .string()
-  .refine((value) => {
-    if (!value) return true;
-    return /^[0-9+\s\-()]+$/.test(value);
-  }, { message: 'phone must contain valid characters only' })
-  .refine((value) => {
-    if (!value) return true;
-    const digits = value.replace(/\D/g, '');
-    return digits.length >= VALIDATION_LIMITS.phoneMinDigits && digits.length <= VALIDATION_LIMITS.phoneMaxDigits;
-  }, {
-    message: `phone must have between ${VALIDATION_LIMITS.phoneMinDigits} and ${VALIDATION_LIMITS.phoneMaxDigits} digits`,
-  });
+  .refine(
+    (value) => {
+      if (!value) return true;
+      return /^[0-9+\s\-()]+$/.test(value);
+    },
+    { message: 'phone must contain valid characters only' },
+  )
+  .refine(
+    (value) => {
+      if (!value) return true;
+      const digits = value.replace(/\D/g, '');
+      return (
+        digits.length >= VALIDATION_LIMITS.phoneMinDigits &&
+        digits.length <= VALIDATION_LIMITS.phoneMaxDigits
+      );
+    },
+    {
+      message: `phone must have between ${VALIDATION_LIMITS.phoneMinDigits} and ${VALIDATION_LIMITS.phoneMaxDigits} digits`,
+    },
+  );
 
 const codigoSupervisorSchema = z
   .string()
@@ -79,12 +88,22 @@ const getFirstError = (result: z.SafeParseReturnType<string, string>) => {
 };
 
 export const validators = {
-  correo: (value: string): string | null => getFirstError(correoSchema.safeParse(value)),
-  nombre: (value: string): string | null => getFirstError(nombreSchema.safeParse(value)),
-  password: (value: string): string | null => getFirstError(passwordSchema.safeParse(value)),
-  telefono: (value: string): string | null => getFirstError(telefonoSchema.safeParse(value || '')),
-  codigoSupervisor: (value: string): string | null => getFirstError(codigoSupervisorSchema.safeParse(value)),
-  validate: (fields: Record<string, { value: string; validator: (v: string) => string | null }>): string | null => {
+  correo: (value: string): string | null =>
+    getFirstError(correoSchema.safeParse(value)),
+  nombre: (value: string): string | null =>
+    getFirstError(nombreSchema.safeParse(value)),
+  password: (value: string): string | null =>
+    getFirstError(passwordSchema.safeParse(value)),
+  telefono: (value: string): string | null =>
+    getFirstError(telefonoSchema.safeParse(value || '')),
+  codigoSupervisor: (value: string): string | null =>
+    getFirstError(codigoSupervisorSchema.safeParse(value)),
+  validate: (
+    fields: Record<
+      string,
+      { value: string; validator: (v: string) => string | null }
+    >,
+  ): string | null => {
     for (const key of Object.keys(fields)) {
       const error = fields[key].validator(fields[key].value);
       if (error) return error;

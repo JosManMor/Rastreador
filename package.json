@@ -1,0 +1,36 @@
+{
+  "name": "rastreador",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JosManMor/Rastreador.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/JosManMor/Rastreador/issues"
+  },
+  "homepage": "https://github.com/JosManMor/Rastreador#readme",
+  "devDependencies": {
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0"
+  },
+  "lint-staged": {
+    "public-html/backend/**/*.{js,jsx}": [
+      "npm run format --prefix rastreadorApp",
+      "git add ."
+    ],
+    "public-html/app_front/**/*.{js,jsx}": [
+      "npm run format --prefix rastreadorFrontend",
+      "git add ."
+    ]
+  }
+}
