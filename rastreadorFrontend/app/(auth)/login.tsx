@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../src/stores/auth.store';
 import { Ionicons } from '@expo/vector-icons';
-import { validators } from '../../src/utils/validators';
+import { VALIDATION_LIMITS, validators } from '../../src/utils/validators';
 import { COLORS } from '../../src/constants';
 
 export default function LoginScreen() {
@@ -24,7 +24,8 @@ export default function LoginScreen() {
     const newErrors: { correo?: string; password?: string } = {};
     const correoError = validators.correo(correo);
     if (correoError) newErrors.correo = correoError;
-    if (!password) newErrors.password = 'La contraseña es obligatoria';
+    const passError = validators.password(password);
+    if (passError) newErrors.password = passError;
 
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
 
@@ -79,6 +80,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              maxLength={VALIDATION_LIMITS.emailMax}
             />
             {errors.correo && <Text style={styles.fieldError}>⚠️ {errors.correo}</Text>}
           </View>
@@ -95,6 +97,7 @@ export default function LoginScreen() {
                 onChangeText={(v) => { setPassword(v); setErrors((p) => ({ ...p, password: undefined })); }}
                 secureTextEntry={!showPass}
                 autoComplete="password"
+                maxLength={VALIDATION_LIMITS.passwordMax}
               />
               <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(!showPass)}>
                 <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.textMuted} />

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { authService } from '../../src/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
-import { validators } from '../../src/utils/validators';
+import { VALIDATION_LIMITS, validators } from '../../src/utils/validators';
 import { COLORS } from '../../src/constants';
 
 interface FieldErrors {
@@ -118,6 +118,7 @@ export default function RegisterScreen() {
               placeholder="Ej: 102"
               placeholderTextColor={COLORS.textMuted}
               keyboardType="numeric"
+              maxLength={VALIDATION_LIMITS.supervisorCodeMax}
             />
             {errors.codigo_supervisor
               ? <Text style={styles.fieldError}>⚠️ {errors.codigo_supervisor}</Text>
@@ -137,6 +138,7 @@ export default function RegisterScreen() {
               placeholder="Ej: Juan Pérez García"
               placeholderTextColor={COLORS.textMuted}
               autoCapitalize="words"
+              maxLength={VALIDATION_LIMITS.nameMax}
             />
             {errors.nombre
               ? <Text style={styles.fieldError}>⚠️ {errors.nombre}</Text>
@@ -155,6 +157,7 @@ export default function RegisterScreen() {
               placeholderTextColor={COLORS.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
+              maxLength={VALIDATION_LIMITS.emailMax}
             />
             {errors.correo && <Text style={styles.fieldError}>⚠️ {errors.correo}</Text>}
           </View>
@@ -169,6 +172,7 @@ export default function RegisterScreen() {
               placeholder="Ej: MiClave2024"
               placeholderTextColor={COLORS.textMuted}
               secureTextEntry
+              maxLength={VALIDATION_LIMITS.passwordMax}
             />
             {errors.password
               ? <Text style={styles.fieldError}>⚠️ {errors.password}</Text>
@@ -186,6 +190,7 @@ export default function RegisterScreen() {
               placeholder="Ej: 3121234567"
               placeholderTextColor={COLORS.textMuted}
               keyboardType="phone-pad"
+              maxLength={20}
             />
             {errors.telefono
               ? <Text style={styles.fieldError}>⚠️ {errors.telefono}</Text>

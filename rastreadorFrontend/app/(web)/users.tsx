@@ -6,7 +6,7 @@ import {
 import { usersService, User } from '../../src/services/users.service';
 import { authService } from '../../src/services/auth.service';
 import { useAuthStore } from '../../src/stores/auth.store';
-import { validators } from '../../src/utils/validators';
+import { VALIDATION_LIMITS, validators } from '../../src/utils/validators';
 import ConfirmModal from '../../src/components/ConfirmModal';
 import { COLORS } from '../../src/constants';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,7 +40,8 @@ export default function UsersScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterRol, setFilterRol] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -67,6 +68,13 @@ export default function UsersScreen() {
   };
 
   useEffect(() => { if (currentUser) load(); }, [currentUser]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim().toLowerCase());
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchInput]);
 
   const openCreate = () => {
     setNewForm(EMPTY_NEW);
@@ -131,6 +139,8 @@ export default function UsersScreen() {
 
     const nameError = validators.nombre(editForm.nombre);
     if (nameError) { alert(nameError); return; }
+    const correoError = validators.correo(editForm.correo);
+    if (correoError) { alert(correoError); return; }
     if (editForm.telefono) {
       const telError = validators.telefono(editForm.telefono);
       if (telError) { alert(telError); return; }
@@ -140,7 +150,7 @@ export default function UsersScreen() {
     try {
       const payload: any = {
         nombre: editForm.nombre.trim(),
-        correo: editForm.correo.trim(),
+        correo: editForm.correo.trim().toLowerCase(),
         telefono: editForm.telefono.trim() || undefined,
         is_active: editForm.is_active,
       };
@@ -176,11 +186,23 @@ export default function UsersScreen() {
 
   const filtered = users.filter((u) => {
     const matchSearch =
-      u.nombre?.toLowerCase().includes(search.toLowerCase()) ||
-      u.correo?.toLowerCase().includes(search.toLowerCase());
+      u.nombre?.toLowerCase().includes(debouncedSearch) ||
+      u.correo?.toLowerCase().includes(debouncedSearch);
     const matchRol = filterRol ? u.rol === filterRol : true;
     return matchSearch && matchRol;
   });
+
+  const roleFilters = isAdmin
+    ? [
+        { value: '', label: 'Todos los roles' },
+        { value: 'ADMIN', label: 'Administrador' },
+        { value: 'SUPERVISOR', label: 'Supervisor' },
+        { value: 'USER', label: 'Usuario' },
+      ]
+    : [
+        { value: '', label: 'Todos los roles' },
+        { value: 'USER', label: 'Usuario' },
+      ];
 
   return (
     <View style={styles.container}>
@@ -204,8 +226,9 @@ export default function UsersScreen() {
           style={styles.search}
           placeholder="Buscar por nombre o correo..."
           placeholderTextColor={COLORS.textMuted}
-          value={search}
-          onChangeText={setSearch}
+          value={searchInput}
+          onChangeText={setSearchInput}
+          maxLength={VALIDATION_LIMITS.emailMax}
         />
         <View style={styles.filterRow}>
           <Text style={styles.filterLabel}>Filtrar por rol:</Text>
@@ -224,10 +247,9 @@ export default function UsersScreen() {
               minWidth: 200,
             } as any}
           >
-            <option value="">Todos los roles</option>
-            <option value="ADMIN">Administrador</option>
-            <option value="SUPERVISOR">Supervisor</option>
-            <option value="USER">Usuario</option>
+            {roleFilters.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </View>
       </View>
@@ -259,10 +281,18 @@ export default function UsersScreen() {
                 </View>
               </View>
               <View style={[styles.cell, { flexDirection: 'row', gap: 6 }]}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(u)}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, isSupervisor && u.rol !== 'USER' && { opacity: 0.5 }]}
+                  onPress={() => openEdit(u)}
+                  disabled={isSupervisor && u.rol !== 'USER'}
+                >
                   <Ionicons name='pencil-outline' size={18} color={COLORS.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: COLORS.danger + '20' }]} onPress={() => setConfirmDelete(u.id_user)}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: COLORS.danger + '20' }, isSupervisor && u.rol !== 'USER' && { opacity: 0.5 }]}
+                  onPress={() => setConfirmDelete(u.id_user)}
+                  disabled={isSupervisor && u.rol !== 'USER'}
+                >
                   <Text style={styles.actionBtnText}>🗑</Text>
                 </TouchableOpacity>
               </View>
@@ -316,6 +346,12 @@ export default function UsersScreen() {
                     placeholderTextColor={COLORS.textMuted}
                     secureTextEntry={secure}
                     autoCapitalize="none"
+                    maxLength={
+                      key === 'nombre' ? VALIDATION_LIMITS.nameMax :
+                      key === 'correo' ? VALIDATION_LIMITS.emailMax :
+                      key === 'password' ? VALIDATION_LIMITS.passwordMax :
+                      20
+                    }
                   />
                 </View>
               ))}
@@ -414,6 +450,11 @@ export default function UsersScreen() {
                   onChangeText={(v) => setEditForm((p) => ({ ...p, [key]: v }))}
                   placeholderTextColor={COLORS.textMuted}
                   autoCapitalize="none"
+                  maxLength={
+                    key === 'nombre' ? VALIDATION_LIMITS.nameMax :
+                    key === 'correo' ? VALIDATION_LIMITS.emailMax :
+                    20
+                  }
                 />
               </View>
             ))}

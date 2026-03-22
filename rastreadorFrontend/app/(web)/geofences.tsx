@@ -6,9 +6,15 @@ import {
 import { geofencesService, Geofence } from '../../src/services/geofences.service';
 import ConfirmModal from '../../src/components/ConfirmModal';
 import { COLORS } from '../../src/constants';
+import { VALIDATION_LIMITS } from '../../src/utils/validators';
 
 const EMPTY_FORM = { nombre: '', tipo: 'CIRCLE' as 'CIRCLE' | 'POLYGON', lat: '', lng: '', radio: '150' };
 const EMPTY_POINTS = [{ lat: '', lng: '' }, { lat: '', lng: '' }, { lat: '', lng: '' }];
+
+const sanitizeCoordinateInput = (value: string) => value.replace(/[^0-9.-]/g, '');
+const isValidLatitude = (value: number) => Number.isFinite(value) && value >= -90 && value <= 90;
+const isValidLongitude = (value: number) => Number.isFinite(value) && value >= -180 && value <= 180;
+const isValidRadius = (value: number) => Number.isFinite(value) && value >= VALIDATION_LIMITS.geofenceRadiusMin && value <= VALIDATION_LIMITS.geofenceRadiusMax;
 
 export default function GeofencesScreen() {
   const [geofences, setGeofences] = useState<Geofence[]>([]);
@@ -55,34 +61,58 @@ export default function GeofencesScreen() {
 
   const save = async () => {
     setError('');
-    if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
+    if (!form.nombre.trim()) { setError('geofence name is required'); return; }
+    if (form.nombre.trim().length > VALIDATION_LIMITS.geofenceNameMax) {
+      setError(`geofence name must have at most ${VALIDATION_LIMITS.geofenceNameMax} characters`);
+      return;
+    }
+
+    let payload: any;
 
     if (form.tipo === 'CIRCLE') {
-      if (!form.lat || !form.lng) { setError('Ingresa latitud y longitud'); return; }
-      if (!form.radio || isNaN(parseFloat(form.radio))) { setError('Ingresa un radio válido'); return; }
+      if (!form.lat || !form.lng) { setError('latitude and longitude are required'); return; }
+
+      const lat = parseFloat(form.lat);
+      const lng = parseFloat(form.lng);
+      const radius = parseFloat(form.radio);
+
+      if (!isValidLatitude(lat)) { setError('latitude must be between -90 and 90'); return; }
+      if (!isValidLongitude(lng)) { setError('longitude must be between -180 and 180'); return; }
+      if (!isValidRadius(radius)) {
+        setError(`radius must be between ${VALIDATION_LIMITS.geofenceRadiusMin} and ${VALIDATION_LIMITS.geofenceRadiusMax} meters`);
+        return;
+      }
+
+      payload = {
+        nombre: form.nombre.trim(),
+        tipo: form.tipo,
+        coordenadas: { lat, lng },
+        radio: radius,
+      };
     } else {
       const valid = polyPoints.filter(p => p.lat.trim() && p.lng.trim());
-      if (valid.length < 3) { setError('Un polígono necesita mínimo 3 puntos con coordenadas'); return; }
+      if (valid.length < 3) { setError('polygon must have at least 3 valid points'); return; }
+
+      const parsedPoints = valid.map((point) => ({
+        lat: parseFloat(point.lat),
+        lng: parseFloat(point.lng),
+      }));
+
+      const hasInvalidPoint = parsedPoints.some((point) => !isValidLatitude(point.lat) || !isValidLongitude(point.lng));
+      if (hasInvalidPoint) {
+        setError('all polygon points must be within valid latitude and longitude ranges');
+        return;
+      }
+
+      payload = {
+        nombre: form.nombre.trim(),
+        tipo: form.tipo,
+        coordenadas: parsedPoints,
+      };
     }
 
     setSaving(true);
     try {
-      let coordenadas: any;
-      if (form.tipo === 'CIRCLE') {
-        coordenadas = { lat: parseFloat(form.lat), lng: parseFloat(form.lng) };
-      } else {
-        coordenadas = polyPoints
-          .filter(p => p.lat.trim() && p.lng.trim())
-          .map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
-      }
-
-      const payload: any = {
-        nombre: form.nombre.trim(),
-        tipo: form.tipo,
-        coordenadas,
-        radio: form.tipo === 'CIRCLE' ? parseFloat(form.radio) : undefined,
-      };
-
       if (editId) await geofencesService.update(editId, payload);
       else await geofencesService.create(payload);
 
@@ -183,6 +213,7 @@ export default function GeofencesScreen() {
                   onChangeText={(v) => setForm((p) => ({ ...p, nombre: v }))}
                   placeholder="Zona Planta Norte"
                   placeholderTextColor={COLORS.textMuted}
+                  maxLength={VALIDATION_LIMITS.geofenceNameMax}
                 />
               </View>
 
@@ -210,19 +241,19 @@ export default function GeofencesScreen() {
                   <View style={styles.row2}>
                     <View style={[styles.field, { flex: 1 }]}>
                       <Text style={styles.fieldLabel}>Latitud *</Text>
-                      <TextInput style={styles.input} value={form.lat} onChangeText={(v) => setForm((p) => ({ ...p, lat: v }))}
-                        placeholder="19.2433" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                      <TextInput style={styles.input} value={form.lat} onChangeText={(v) => setForm((p) => ({ ...p, lat: sanitizeCoordinateInput(v) }))}
+                        placeholder="19.2433" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" maxLength={16} />
                     </View>
                     <View style={[styles.field, { flex: 1 }]}>
                       <Text style={styles.fieldLabel}>Longitud *</Text>
-                      <TextInput style={styles.input} value={form.lng} onChangeText={(v) => setForm((p) => ({ ...p, lng: v }))}
-                        placeholder="-103.7247" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                      <TextInput style={styles.input} value={form.lng} onChangeText={(v) => setForm((p) => ({ ...p, lng: sanitizeCoordinateInput(v) }))}
+                        placeholder="-103.7247" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" maxLength={16} />
                     </View>
                   </View>
                   <View style={styles.field}>
                     <Text style={styles.fieldLabel}>Radio (metros) *</Text>
-                    <TextInput style={styles.input} value={form.radio} onChangeText={(v) => setForm((p) => ({ ...p, radio: v }))}
-                      placeholder="150" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                    <TextInput style={styles.input} value={form.radio} onChangeText={(v) => setForm((p) => ({ ...p, radio: sanitizeCoordinateInput(v) }))}
+                      placeholder="150" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" maxLength={6} />
                   </View>
                 </>
               )}
@@ -256,18 +287,20 @@ export default function GeofencesScreen() {
                       <TextInput
                         style={[styles.input, { flex: 1 }]}
                         value={pt.lat}
-                        onChangeText={(v) => setPolyPoints((prev) => prev.map((p, idx) => idx === i ? { ...p, lat: v } : p))}
+                        onChangeText={(v) => setPolyPoints((prev) => prev.map((p, idx) => idx === i ? { ...p, lat: sanitizeCoordinateInput(v) } : p))}
                         placeholder="19.2433"
                         placeholderTextColor={COLORS.textMuted}
                         keyboardType="numeric"
+                        maxLength={16}
                       />
                       <TextInput
                         style={[styles.input, { flex: 1 }]}
                         value={pt.lng}
-                        onChangeText={(v) => setPolyPoints((prev) => prev.map((p, idx) => idx === i ? { ...p, lng: v } : p))}
+                        onChangeText={(v) => setPolyPoints((prev) => prev.map((p, idx) => idx === i ? { ...p, lng: sanitizeCoordinateInput(v) } : p))}
                         placeholder="-103.72"
                         placeholderTextColor={COLORS.textMuted}
                         keyboardType="numeric"
+                        maxLength={16}
                       />
                       {polyPoints.length > 3 ? (
                         <TouchableOpacity

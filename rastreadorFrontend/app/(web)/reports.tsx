@@ -49,7 +49,13 @@ export default function ReportsScreen() {
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `reporte_${selectedUser.nombre}_${startDate}.${type === 'pdf' ? 'pdf' : 'xlsx'}`;
+      const safeName = selectedUser.nombre
+        .trim()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9_]/g, '');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const ext = type === 'pdf' ? 'pdf' : 'xlsx';
+      a.download = `reporte_${safeName}_${startDate}_${endDate}_${timestamp}.${ext}`;
       a.click();
     }
   };

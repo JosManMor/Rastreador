@@ -196,13 +196,13 @@ export default function AuditScreen() {
                 </View>
                 <View style={[styles.cell, { flex: 1 }]}>
                   <Text style={styles.cellUser} numberOfLines={1}>
-                    {log.usuario_nombre ?? `#${log.id_user_action}`}
+                    {log.usuario_nombre || (log.id_user_action ? `Deleted User #${log.id_user_action}` : 'System')}
                   </Text>
                   {log.usuario_rol && (
                     <Text style={styles.cellRole}>{log.usuario_rol}</Text>
                   )}
                 </View>
-                <Text style={[styles.cell, styles.cellDetail, { flex: 2 }]} numberOfLines={2}>
+                <Text style={[styles.cell, styles.cellDetail, { flex: 2 }]} numberOfLines={1} ellipsizeMode="tail">
                   {log.details}
                 </Text>
               </View>
