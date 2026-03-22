@@ -25,10 +25,12 @@
   },
   "lint-staged": {
     "rastreadorApp/**/*.{ts,tsx,js}": [
-      "npm run format --prefix rastreadorApp --"
+      "npm run format --prefix rastreadorApp --",
+      "git add ."
     ],
     "rastreadorFrontend/**/*.{ts,tsx,js}": [
-      "npm run format --prefix rastreadorFrontend --"
+      "npm run format --prefix rastreadorFrontend --",
+      "git add ."
     ]
   }
 }

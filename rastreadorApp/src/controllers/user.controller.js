@@ -61,32 +61,26 @@ exports.createUser = async (req, res) => {
           .status(400)
           .json({ message: 'El rol es obligatorio para el administrador.' });
       if (rol === 'USER' && !supervisorId) {
-        return res
-          .status(400)
-          .json({
-            message:
-              'Para crear un rol USER, debe proporcionar un `supervisorId`.',
-          });
+        return res.status(400).json({
+          message:
+            'Para crear un rol USER, debe proporcionar un `supervisorId`.',
+        });
       }
       if (rol === 'USER' && supervisorId) {
         const supervisorValidation = userIdSchema.safeParse(supervisorId);
         if (!supervisorValidation.success) {
-          return res
-            .status(400)
-            .json({
-              message: getValidationMessage(supervisorValidation.error),
-            });
+          return res.status(400).json({
+            message: getValidationMessage(supervisorValidation.error),
+          });
         }
         const [supervisorExists] = await db.query(
           'SELECT id_user FROM Users WHERE id_user = ? AND rol = ? AND is_active = TRUE',
           [supervisorId, 'SUPERVISOR'],
         );
         if (supervisorExists.length === 0) {
-          return res
-            .status(400)
-            .json({
-              message: 'supervisorId must belong to an active SUPERVISOR user',
-            });
+          return res.status(400).json({
+            message: 'supervisorId must belong to an active SUPERVISOR user',
+          });
         }
       }
     }
@@ -203,11 +197,9 @@ exports.updateUser = async (req, res) => {
           .json({ message: 'No tiene permiso para actualizar este usuario.' });
       }
       if (rol && rol !== 'USER') {
-        return res
-          .status(403)
-          .json({
-            message: 'Un supervisor no puede cambiar el rol de un usuario.',
-          });
+        return res.status(403).json({
+          message: 'Un supervisor no puede cambiar el rol de un usuario.',
+        });
       }
     }
 
@@ -298,12 +290,10 @@ exports.deleteUser = async (req, res) => {
     res.json({ message: 'Usuario eliminado exitosamente' });
   } catch (error) {
     if (error.code === 'ER_ROW_IS_REFERENCED_2') {
-      return res
-        .status(400)
-        .json({
-          message:
-            'No se puede eliminar el usuario porque tiene datos asociados (reportes, alertas, etc.).',
-        });
+      return res.status(400).json({
+        message:
+          'No se puede eliminar el usuario porque tiene datos asociados (reportes, alertas, etc.).',
+      });
     }
     console.error('Error al eliminar usuario:', error);
     res.status(500).json({ message: 'Error interno al eliminar usuario' });
