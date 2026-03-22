@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -52,6 +52,11 @@ const EMPTY_EDIT = {
   is_active: true,
 };
 
+type ToastState = {
+  visible: boolean;
+  message: string;
+};
+
 export default function UsersScreen() {
   const { user: currentUser } = useAuthStore();
   const isAdmin = currentUser?.rol === 'ADMIN';
@@ -73,6 +78,31 @@ export default function UsersScreen() {
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [toast, setToast] = useState<ToastState>({
+    visible: false,
+    message: '',
+  });
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showErrorToast = (message: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    setToast({ visible: true, message });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast({ visible: false, message: '' });
+      toastTimeoutRef.current = null;
+    }, 3500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const load = () => {
     setLoading(true);
@@ -111,7 +141,7 @@ export default function UsersScreen() {
       correo: u.correo,
       telefono: u.telefono ?? '',
       rol: u.rol,
-      is_active: u.is_active,
+      is_active: Boolean(u.is_active),
     });
     setEditing(u);
     setShowEdit(true);
@@ -182,18 +212,18 @@ export default function UsersScreen() {
 
     const nameError = validators.nombre(editForm.nombre);
     if (nameError) {
-      alert(nameError);
+      showErrorToast(nameError);
       return;
     }
     const correoError = validators.correo(editForm.correo);
     if (correoError) {
-      alert(correoError);
+      showErrorToast(correoError);
       return;
     }
     if (editForm.telefono) {
       const telError = validators.telefono(editForm.telefono);
       if (telError) {
-        alert(telError);
+        showErrorToast(telError);
         return;
       }
     }
@@ -204,7 +234,7 @@ export default function UsersScreen() {
         nombre: editForm.nombre.trim(),
         correo: editForm.correo.trim().toLowerCase(),
         telefono: editForm.telefono.trim() || undefined,
-        is_active: editForm.is_active,
+        is_active: Boolean(editForm.is_active),
       };
       // Solo ADMIN puede cambiar el rol
       if (isAdmin) payload.rol = editForm.rol;
@@ -214,9 +244,9 @@ export default function UsersScreen() {
       load();
     } catch (e: any) {
       if (e?.response?.status === 403) {
-        alert('Acceso denegado: no puedes modificar este usuario');
+        showErrorToast('Acceso denegado: no puedes modificar este usuario');
       } else {
-        alert(e?.response?.data?.message || 'Error al guardar');
+        showErrorToast(e?.response?.data?.message || 'Error al guardar');
       }
     } finally {
       setSaving(false);
@@ -231,9 +261,9 @@ export default function UsersScreen() {
     } catch (e: any) {
       setConfirmDelete(null);
       if (e?.response?.status === 403) {
-        alert('Acceso denegado: no puedes eliminar este usuario');
+        showErrorToast('Acceso denegado: no puedes eliminar este usuario');
       } else {
-        alert(
+        showErrorToast(
           e?.response?.data?.message ||
             'No se pudo eliminar. Puede tener datos asociados.',
         );
@@ -263,6 +293,14 @@ export default function UsersScreen() {
 
   return (
     <View style={styles.container}>
+      {toast.visible ? (
+        <View style={styles.toastWrap} pointerEvents="none">
+          <View style={styles.toastError}>
+            <Text style={styles.toastErrorText}>{toast.message}</Text>
+          </View>
+        </View>
+      ) : null}
+
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>
@@ -740,6 +778,26 @@ export default function UsersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
+  toastWrap: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 999,
+  },
+  toastError: {
+    maxWidth: 420,
+    backgroundColor: COLORS.danger + '20',
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  toastErrorText: {
+    color: COLORS.danger,
+    fontSize: 13,
+    fontWeight: '600',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
