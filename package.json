@@ -24,13 +24,11 @@
     "lint-staged": "16.4.0"
   },
   "lint-staged": {
-    "public-html/backend/**/*.{js,jsx}": [
-      "npm run format --prefix rastreadorApp",
-      "git add ."
+    "rastreadorApp/**/*.{ts,tsx,js}": [
+      "npm run format --prefix rastreadorApp/"
     ],
-    "public-html/app_front/**/*.{js,jsx}": [
-      "npm run format --prefix rastreadorFrontend",
-      "git add ."
+    "rastreadorFrontend/**/*.{ts,tsx,js}": [
+      "npm run format --prefix rastreadorFrontend/"
     ]
   }
 }
